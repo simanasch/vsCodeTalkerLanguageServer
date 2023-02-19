@@ -58,12 +58,14 @@ namespace aviUtlDropper
                 data = CreateCopyDataStruct(layer, stepFrameCount, filePathes);
                 // lparamを作る
                 lparam = Marshal.AllocHGlobal(Marshal.SizeOf(data));
+                Marshal.StructureToPtr(data, lparam, false);
                 // sendMessageの呼び出し
-                // SendMessage();
+                 SendMessage(gcmzDropsData.WindowHandle, WM_COPYDATA, ownWindowHandle, lparam);
             }
             catch (Exception ex)
             {
                 // 
+                Console.WriteLine("なんか落ちた"+ex);
             }
             finally
             {
@@ -150,6 +152,13 @@ namespace aviUtlDropper
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool UnmapViewOfFile(IntPtr address);
 
+        // デスクトップのウィンドウ取得
+
+        [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
+        private static extern IntPtr GetDesktopWindow();
+
+        [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
+        private static extern IntPtr GetWindow(IntPtr windowHandle, uint flags);
         // ごちゃまぜドロップスのAPI(sendMessage)関係
         private const uint WM_COPYDATA = 0x004A;
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
