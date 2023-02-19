@@ -25,12 +25,12 @@ namespace SpeechGrpcServer
 
         public override Task<ttsResult> record(ttsRequest request, ServerCallContext context)
         {
-            return RecordTask(request.LibraryName, request.EngineName, request.Body, request.OutputPath);
+            return RecordTask(request);
         }
 
         public override Task<ttsResult> talk(ttsRequest request, ServerCallContext context)
         {
-            return TalkTask(request.LibraryName, request.EngineName, request.Body, request.OutputPath);
+            return TalkTask(request);
         }
 
         private static SpeechEngineList GetLibraryList()
@@ -51,16 +51,16 @@ namespace SpeechGrpcServer
             return results;
         }
 
-        private static Task<ttsResult> TalkTask(String libraryName, String engineName, String body, String outputPath)
+        private static Task<ttsResult> TalkTask(ttsRequest request)
         {
-            Console.WriteLine("talk called,Library Name:" + libraryName + "\nengine:" + engineName + "\nbody:" + body);
+            Console.WriteLine("talk called,Library Name:" + request.LibraryName + "\nengine:" + request.EngineName + "\nbody:" + request.Body);
             // engine.finishedイベントが呼ばれてから結果を返すようにするためTaskCompletionSourceを使う
             var tcs = new TaskCompletionSource<ttsResult>();
 
-            ISpeechController engine = getInstance(libraryName, engineName);
+            ISpeechController engine = getInstance(request.LibraryName, request.EngineName);
             if (engine == null)
             {
-                Console.WriteLine($"{libraryName} を起動できませんでした。");
+                Console.WriteLine($"{request.LibraryName} を起動できませんでした。");
                 return Task.FromResult(new ttsResult
                 {
                     IsSuccess = false,
@@ -76,59 +76,39 @@ namespace SpeechGrpcServer
                 tcs.TrySetResult(new ttsResult
                 {
                     IsSuccess = true,
-                    LibraryName = libraryName,
-                    EngineName = engineName,
-                    Body = body,
-                    OutputPath = outputPath
+                    LibraryName = request.LibraryName,
+                    EngineName = request.EngineName,
+                    Body = request.Body,
+                    OutputPath = request.OutputPath
                 });
             };
-            engine.Play(body);
+            engine.Play(request.Body);
             return tcs.Task;
         }
 
-        private static Task<ttsResult> RecordTask(String libraryName, String engineName, String body, String outputPath)
+        private static Task<ttsResult> RecordTask(ttsRequest request)
         {
-            Console.WriteLine("Record called,Library Name:" + libraryName + "\nengine:" + engineName + "\nbody:" + body);
+            Console.WriteLine("Record called,Library Name:" + request.LibraryName + "\nengine:" + request.EngineName + "\nbody:" + request.Body);
             // engine.finishedイベントが呼ばれてから結果を返すようにするためTaskCompletionSourceを使う
-            var tcs = new TaskCompletionSource<ttsResult>();
+            //var tcs = new TaskCompletionSource<ttsResult>();
 
-            SoundRecorder recorder = new SoundRecorder(outputPath);
+            SoundRecorder recorder = new SoundRecorder(request.OutputPath);
             recorder.PostWait = 300;
 
-            ISpeechController engine = getInstance(libraryName, engineName);
+            ISpeechController engine = getInstance(request.LibraryName, request.EngineName);
             if (engine == null)
             {
-                Console.WriteLine($"{libraryName} を起動できませんでした。");
+                Console.WriteLine($"{request.LibraryName} を起動できませんでした。");
                 return Task.FromResult(new ttsResult
                 {
                     IsSuccess = false
                 });
             }
-            engine.Activate();
-            engine.Finished += (s, a) =>
-            {
-                Task t = recorder.Stop();
-                t.Wait();
-                engine.Dispose();
-                Console.WriteLine("record completed");
-                WavResampler.resampleTo16bit(outputPath);
-                tcs.TrySetResult(new ttsResult
-                {
-                    IsSuccess = true,
-                    LibraryName = libraryName,
-                    EngineName = engineName,
-                    Body = body,
-                    OutputPath = outputPath
-                });
-                AviutlConnector.SendFile(TTSControllerImpl.Handle, outputPath);
-            };
-            // recorderの起動後に音声を再生する
-            recorder.Start();
-            engine.Play(body);
-            return tcs.Task;
+            // TODO: 録音機能を自前実装してるかで処理分岐
+            return RecordViaTtsController(engine, recorder, request);
         }
 
-        private static Task<ttsResult> RecordViaTtsController(ISpeechController engine, SoundRecorder recorder, String libraryName, String engineName, String body, String outputPath)
+        private static Task<ttsResult> RecordViaTtsController(ISpeechController engine, SoundRecorder recorder, ttsRequest request)
         {
             var tcs = new TaskCompletionSource<ttsResult>();
             engine.Activate();
@@ -138,19 +118,20 @@ namespace SpeechGrpcServer
                 t.Wait();
                 engine.Dispose();
                 Console.WriteLine("record completed");
-                WavResampler.resampleTo16bit(outputPath);
+                WavResampler.resampleTo16bit(request.OutputPath);
                 tcs.TrySetResult(new ttsResult
                 {
                     IsSuccess = true,
-                    LibraryName = libraryName,
-                    EngineName = engineName,
-                    Body = body,
-                    OutputPath = outputPath
+                    LibraryName = request.LibraryName,
+                    EngineName = request.EngineName,
+                    Body = request.Body,
+                    OutputPath = request.OutputPath
                 });
+                AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath);
             };
             // recorderの起動後に音声を再生する
             recorder.Start();
-            engine.Play(body);
+            engine.Play(request.Body);
             return tcs.Task;
         }
 

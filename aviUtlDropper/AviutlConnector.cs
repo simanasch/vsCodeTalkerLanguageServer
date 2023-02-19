@@ -44,16 +44,15 @@ namespace aviUtlConnector
             {
                 Console.WriteLine("mutex開き損ねた" + ex);
             }
-            var data = new COPYDATASTRUCT();
-            var lparam = IntPtr.Zero;
-            var handle = IntPtr.Zero;
             bool isMutexLocked = false;
-            var dataAddress = IntPtr.Zero;
-            GcmzDropsProjectConfig gcmzDropsData = null;
             try
             {
+                GcmzDropsProjectConfig gcmzDropsData = null;
+                var data = new COPYDATASTRUCT();
+                var dataAddress = IntPtr.Zero;
+                var lparam = IntPtr.Zero;
                 // ごちゃまぜドロップスのバージョン情報を読取る
-                handle = OpenFileMapping(FILE_MAP_READ, false, FileMapName);
+                var handle = OpenFileMapping(FILE_MAP_READ, false, FileMapName);
                 dataAddress = MapViewOfFile(handle, FILE_MAP_READ, 0, 0, UIntPtr.Zero);
                 var GcmzDropsData =
                     (GcmzDropsProjectConfig.CurrentLayout)Marshal.PtrToStructure(
