@@ -7,19 +7,19 @@ using System.IO;
 using System.Text;
 using Codeplex.Data;
 
-namespace aviUtlDropper
+namespace aviUtlConnector
 {
-    public class Dropper
+    public class AviutlConnector
     {
         private const string FileMapName = @"GCMZDrops";
-        public static void Drop(
+        public static void SendFile(
             IntPtr ownWindowHandle,
             string filePath,
             int stepFrameCount = 0,
             int layer = 0,
             int timeoutMilliseconds = -1)
         {
-            Drop(
+            SendFiles(
                 ownWindowHandle,
                 new[] { filePath },
                 stepFrameCount,
@@ -27,7 +27,7 @@ namespace aviUtlDropper
                 timeoutMilliseconds);
         }
 
-        public static void Drop(
+        public static void SendFiles(
             IntPtr ownWindowHandle,
             IEnumerable<string> filePathes,
             int stepFrameCount = 0,
@@ -49,18 +49,17 @@ namespace aviUtlDropper
             var handle = IntPtr.Zero;
             bool isMutexLocked = false;
             var dataAddress = IntPtr.Zero;
-            GcmzDropsData gcmzDropsData = null;
+            GcmzDropsProjectConfig gcmzDropsData = null;
             try
             {
                 // ごちゃまぜドロップスのバージョン情報を読取る
-                // var result = ReadAndValidateGcmzInfo(out var gcmzInfo, mutex != null);
                 handle = OpenFileMapping(FILE_MAP_READ, false, FileMapName);
                 dataAddress = MapViewOfFile(handle, FILE_MAP_READ, 0, 0, UIntPtr.Zero);
                 var GcmzDropsData =
-                    (GcmzDropsData.CurrentLayout)Marshal.PtrToStructure(
+                    (GcmzDropsProjectConfig.CurrentLayout)Marshal.PtrToStructure(
                         dataAddress,
-                        typeof(GcmzDropsData.CurrentLayout));
-                gcmzDropsData = new GcmzDropsData(ref GcmzDropsData);
+                        typeof(GcmzDropsProjectConfig.CurrentLayout));
+                gcmzDropsData = new GcmzDropsProjectConfig(ref GcmzDropsData);
                 if (dataAddress != IntPtr.Zero)
                 {
                     UnmapViewOfFile(dataAddress);
@@ -69,13 +68,14 @@ namespace aviUtlDropper
                 {
                     CloseHandle(handle);
                 }
+                // 処理を分けるのでここらへんで一回返す
                 // copyDataStructを作る
                 data = CreateCopyDataStruct(layer, stepFrameCount, filePathes);
                 // lparamを作る
                 lparam = Marshal.AllocHGlobal(Marshal.SizeOf(data));
                 Marshal.StructureToPtr(data, lparam, false);
                 // sendMessageの呼び出し
-                 SendMessage(gcmzDropsData.WindowHandle, WM_COPYDATA, ownWindowHandle, lparam);
+                SendMessage(gcmzDropsData.WindowHandle, WM_COPYDATA, ownWindowHandle, lparam);
             }
             catch (Exception ex)
             {

@@ -40,9 +40,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Dropper.cs" />
-    <Compile Include="DynamicJson.cs" />
-    <Compile Include="GcmzDropsData.cs" />
+    <Compile Include="AviutlConnector.cs" />
+    <Compile Include="lib\DynamicJson.cs" />
+    <Compile Include="GcmzDropsProjectConfig.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />

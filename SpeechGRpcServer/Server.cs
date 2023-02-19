@@ -4,6 +4,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Ttscontroller;
 using System.Threading;
+using System.Diagnostics;
 
 namespace SpeechGrpcServer
 {
@@ -29,10 +30,11 @@ namespace SpeechGrpcServer
 
         static void RunServer(Options o)
         {
+            IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
             server = new Grpc.Core.Server
             {
                 Services = {
-                    TTSService.BindService(new TTSControllerImpl())
+                    TTSService.BindService(new TTSControllerImpl(handle))
                 },
                 Ports = { new ServerPort("localhost", o.Port, ServerCredentials.Insecure) }
             };

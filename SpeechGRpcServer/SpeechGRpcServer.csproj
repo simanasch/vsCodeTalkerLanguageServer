@@ -38,7 +38,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\aviUtlDropper\aviUtlDropper.csproj" />
+    <ProjectReference Include="..\aviUtlDropper\aviUtlConnector.csproj" />
     <ProjectReference Include="..\..\TTSController\src\Speech\Speech.csproj" />
   </ItemGroup>
   <ItemGroup>

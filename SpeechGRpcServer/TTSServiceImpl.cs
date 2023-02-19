@@ -6,13 +6,18 @@ using Grpc.Core;
 using Ttscontroller;
 using System.Threading;
 using System.Diagnostics;
-using aviUtlDropper;
+using aviUtlConnector;
 
 namespace SpeechGrpcServer
 {
 
     public class TTSControllerImpl : TTSService.TTSServiceBase
     {
+        internal static IntPtr Handle;
+        public TTSControllerImpl(IntPtr intPtr)
+        {
+            Handle = intPtr;
+        }
         public override Task<SpeechEngineList> getSpeechEngineDetail(SpeechEngineRequest request, ServerCallContext context)
         {
             return Task.FromResult(GetLibraryList());
@@ -115,8 +120,7 @@ namespace SpeechGrpcServer
                     Body = body,
                     OutputPath = outputPath
                 });
-                IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
-                Dropper.Drop(handle, outputPath);
+                AviutlConnector.SendFile(TTSControllerImpl.Handle, outputPath);
             };
             // recorderの起動後に音声を再生する
             recorder.Start();
