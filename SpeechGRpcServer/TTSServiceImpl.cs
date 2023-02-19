@@ -5,6 +5,8 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Ttscontroller;
 using System.Threading;
+using System.Diagnostics;
+using aviUtlDropper;
 
 namespace SpeechGrpcServer
 {
@@ -113,6 +115,8 @@ namespace SpeechGrpcServer
                     Body = body,
                     OutputPath = outputPath
                 });
+                IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
+                Dropper.Drop(handle, outputPath);
             };
             // recorderの起動後に音声を再生する
             recorder.Start();

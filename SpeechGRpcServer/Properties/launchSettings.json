@@ -2,7 +2,7 @@
   "profiles": {
     "SpeechGRpcServer": {
       "commandName": "Project",
-      "commandLineArgs": "-v -p 5005"
+      "commandLineArgs": "-p 5005"
     }
   }
 }
