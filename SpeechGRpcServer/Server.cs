@@ -4,6 +4,8 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Ttscontroller;
 using System.Threading;
+using System.Diagnostics;
+using aviUtlDropper;
 
 namespace SpeechGrpcServer
 {
@@ -22,24 +24,28 @@ namespace SpeechGrpcServer
 
         static void Main(string[] args)
         {
+            IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
+            // Dropper.Drop(handle, @"E:\Videos\VoiceroidWaveFiles\きりたん_これ、後々ボスが出てく+9.wav");
             Parser.Default.ParseArguments<Options>(args)
-            .WithParsed(o =>
+            .WithParsed(o => RunServer(o));
+        }
+
+        static void RunServer(Options o)
+        {
+            server = new Grpc.Core.Server
             {
-                server = new Grpc.Core.Server
-                {
-                    Services = {
+                Services = {
                         TTSService.BindService(new TTSControllerImpl())
                     },
-                    Ports = { new ServerPort("localhost", o.Port, ServerCredentials.Insecure) }
-                };
-                server.Start();
+                Ports = { new ServerPort("localhost", o.Port, ServerCredentials.Insecure) }
+            };
+            server.Start();
 
-                Console.WriteLine("localhost:" + o.Port + "で接続待機中");
-                while (true)
-                {
-                    Thread.Sleep(500);
-                }
-            });
+            Console.WriteLine("localhost:" + o.Port + "で接続待機中");
+            while (true)
+            {
+                Thread.Sleep(500);
+            }
         }
     }
 }

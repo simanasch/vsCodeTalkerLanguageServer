@@ -14,6 +14,21 @@ namespace aviUtlDropper
         private const string FileMapName = @"GCMZDrops";
         public static void Drop(
             IntPtr ownWindowHandle,
+            string filePath,
+            int stepFrameCount = 0,
+            int layer = 0,
+            int timeoutMilliseconds = -1)
+        {
+            Drop(
+                ownWindowHandle,
+                new[] { filePath },
+                stepFrameCount,
+                layer,
+                timeoutMilliseconds);
+        }
+
+        public static void Drop(
+            IntPtr ownWindowHandle,
             IEnumerable<string> filePathes,
             int stepFrameCount = 0,
             int layer = 0,

@@ -2,12 +2,12 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net4.5.2</TargetFramework>
+    <TargetFramework>net452</TargetFramework>
     <AssemblyName>SpeechGRpcServer</AssemblyName>
     <RootNamespace>SpeechGRpcServer</RootNamespace>
     <Platforms>AnyCPU;x64</Platforms>
     <ApplicationIcon />
-    <StartupObject />
+    <StartupObject>SpeechGrpcServer.Server</StartupObject>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
