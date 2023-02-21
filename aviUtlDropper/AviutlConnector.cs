@@ -6,6 +6,7 @@ using System.Linq;
 using System.IO;
 using System.Text;
 using Codeplex.Data;
+using aviUtlDropper.utilities;
 
 namespace aviUtlConnector
 {
@@ -13,14 +14,14 @@ namespace aviUtlConnector
     {
         private const string FileMapName = @"GCMZDrops";
         public static void SendFile(
-            IntPtr ownWindowHandle,
+            IntPtr fromWindowHandle,
             string filePath,
             int stepFrameCount = 0,
             int layer = 0,
             int timeoutMilliseconds = -1)
         {
             SendFiles(
-                ownWindowHandle,
+                fromWindowHandle,
                 new[] { filePath },
                 stepFrameCount,
                 layer,
@@ -28,12 +29,13 @@ namespace aviUtlConnector
         }
 
         public static void SendFiles(
-            IntPtr ownWindowHandle,
-            IEnumerable<string> filePathes,
+            IntPtr fromWindowHandle,
+            string[] filePathes,
             int stepFrameCount = 0,
             int layer = 0,
             int timeoutMilliseconds = -1)
         {
+            // TODO:mutexによるロック状態はクラス変数にする
             Mutex mutex = null;
             // mutexによる排他制御ができる場合、mutexによるロックを取得する
             try
@@ -67,14 +69,15 @@ namespace aviUtlConnector
                 {
                     CloseHandle(handle);
                 }
-                // 処理を分けるのでここらへんで一回返す
+                // 処理を分けるのでここらへんでgcmzDropsDataを一回返す?
+                // wavファイルを開く、ファイルパスから型判別する
                 // copyDataStructを作る
-                data = CreateCopyDataStruct(layer, stepFrameCount, filePathes);
+                data = CreateCopyDataStruct(filePathes, layer);
                 // lparamを作る
                 lparam = Marshal.AllocHGlobal(Marshal.SizeOf(data));
                 Marshal.StructureToPtr(data, lparam, false);
                 // sendMessageの呼び出し
-                SendMessage(gcmzDropsData.WindowHandle, WM_COPYDATA, ownWindowHandle, lparam);
+                SendMessage(gcmzDropsData.WindowHandle, WM_COPYDATA, fromWindowHandle, lparam);
             }
             catch (Exception ex)
             {
@@ -105,10 +108,23 @@ namespace aviUtlConnector
         /// DataAddress フィールドは利用後に Marshal.FreeHGlobal で解放する必要がある。
         /// </returns>
         private static COPYDATASTRUCT CreateCopyDataStruct(
+            String[] files,
             int layer,
-            int frameAdvance,
-            IEnumerable<string> files)
+            int frameAdvance = 0)
         {
+            // 何フレーム進めるかの取得処理
+            foreach(String filePath in files)
+            {
+                // .wavファイルかつframeAdvanceが設定されてない場合、最初のwavファイルの長さだけ進める
+                String fileExt = Path.GetExtension(filePath);
+                if(fileExt.ToLower() == ".wav" && frameAdvance <= 0)
+                {
+                    // 返却値がミリ秒なので/1000*フレームレートが進めるべきフレーム数
+                    double rawFrameCount = Audio.getAudioFileMilliSecondsLength(filePath);
+                    frameAdvance = (int)Math.Round(rawFrameCount / 1000 * 60);
+                    break;
+                }
+            }
             // 送信JSON文字列作成
             var json = DynamicJson.Serialize(new { layer, frameAdvance, files });
             var data = Encoding.UTF8.GetBytes(json);
