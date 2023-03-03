@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.33214.272
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aviUtlDropper", "aviUtlDropper\aviUtlDropper.csproj", "{02DDC961-D3B5-4080-801A-391A4573D648}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aviUtlConnector", "aviUtlDropper\aviUtlConnector.csproj", "{02DDC961-D3B5-4080-801A-391A4573D648}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeechGRpcServer", "SpeechGRpcServer\SpeechGRpcServer.csproj", "{31E3AECD-3161-4DBD-BB33-B00A92BDCEB0}"
 EndProject

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace aviUtlDropper
+namespace aviUtlConnector
 {
-    class GcmzDropsData
+    class GcmzDropsProjectConfig
     {
         // ごちゃまぜドロップスv0.3.11以前
         internal struct LegacyLayout
@@ -32,7 +32,7 @@ namespace aviUtlDropper
             public int AudioChannel;
             public int ApiVersion;
         }
-        internal GcmzDropsData(ref CurrentLayout data)
+        internal GcmzDropsProjectConfig(ref CurrentLayout data)
         {
             this.WindowHandle = new IntPtr(data.WindowHandle);
             this.Width = data.Width;

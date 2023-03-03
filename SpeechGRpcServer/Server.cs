@@ -5,7 +5,6 @@ using Grpc.Core;
 using Ttscontroller;
 using System.Threading;
 using System.Diagnostics;
-using aviUtlDropper;
 
 namespace SpeechGrpcServer
 {
@@ -24,19 +23,19 @@ namespace SpeechGrpcServer
 
         static void Main(string[] args)
         {
-            IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
-            // Dropper.Drop(handle, @"E:\Videos\VoiceroidWaveFiles\きりたん_これ、後々ボスが出てく+9.wav");
+            
             Parser.Default.ParseArguments<Options>(args)
             .WithParsed(o => RunServer(o));
         }
 
         static void RunServer(Options o)
         {
+            IntPtr handle = Process.GetCurrentProcess().MainWindowHandle;
             server = new Grpc.Core.Server
             {
                 Services = {
-                        TTSService.BindService(new TTSControllerImpl())
-                    },
+                    TTSService.BindService(new TTSControllerImpl(handle))
+                },
                 Ports = { new ServerPort("localhost", o.Port, ServerCredentials.Insecure) }
             };
             server.Start();
