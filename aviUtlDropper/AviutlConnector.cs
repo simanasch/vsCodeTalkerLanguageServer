@@ -16,23 +16,23 @@ namespace aviUtlConnector
         public static void SendFile(
             IntPtr fromWindowHandle,
             string filePath,
-            int stepFrameCount = 0,
             int layer = 0,
+            int stepFrameCount = 0,
             int timeoutMilliseconds = -1)
         {
             SendFiles(
                 fromWindowHandle,
                 new[] { filePath },
-                stepFrameCount,
                 layer,
+                stepFrameCount,
                 timeoutMilliseconds);
         }
 
         public static void SendFiles(
             IntPtr fromWindowHandle,
             string[] filePathes,
-            int stepFrameCount = 0,
             int layer = 0,
+            int stepFrameCount = 0,
             int timeoutMilliseconds = -1)
         {
             // TODO:mutexによるロック状態はクラス変数にする
