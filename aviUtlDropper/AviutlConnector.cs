@@ -35,16 +35,16 @@ namespace aviUtlConnector
             int stepFrameCount = 0,
             int timeoutMilliseconds = -1)
         {
-            // TODO:mutex‚É‚æ‚éƒƒbƒNó‘Ô‚ÍƒNƒ‰ƒX•Ï”‚É‚·‚é
+            // TODO:mutexã«ã‚ˆã‚‹ãƒ­ãƒƒã‚¯çŠ¶æ…‹ã¯ã‚¯ãƒ©ã‚¹å¤‰æ•°ã«ã™ã‚‹
             Mutex mutex = null;
-            // mutex‚É‚æ‚é”r‘¼§Œä‚ª‚Å‚«‚éê‡Amutex‚É‚æ‚éƒƒbƒN‚ğæ“¾‚·‚é
+            // mutexã«ã‚ˆã‚‹æ’ä»–åˆ¶å¾¡ãŒã§ãã‚‹å ´åˆã€mutexã«ã‚ˆã‚‹ãƒ­ãƒƒã‚¯ã‚’å–å¾—ã™ã‚‹
             try
             {
                 Mutex.TryOpenExisting(@"GCMZDropsMutex", out mutex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("mutexŠJ‚«‘¹‚Ë‚½" + ex);
+                Console.WriteLine("mutexé–‹ãæã­ãŸ" + ex);
             }
             bool isMutexLocked = false;
             try
@@ -53,7 +53,7 @@ namespace aviUtlConnector
                 var data = new COPYDATASTRUCT();
                 var dataAddress = IntPtr.Zero;
                 var lparam = IntPtr.Zero;
-                // ‚²‚¿‚á‚Ü‚ºƒhƒƒbƒvƒX‚Ìƒo[ƒWƒ‡ƒ“î•ñ‚ğ“Çæ‚é
+                // ã”ã¡ã‚ƒã¾ãœãƒ‰ãƒ­ãƒƒãƒ—ã‚¹ã®ãƒãƒ¼ã‚¸ãƒ§ãƒ³æƒ…å ±ã‚’èª­å–ã‚‹
                 var handle = OpenFileMapping(FILE_MAP_READ, false, FileMapName);
                 dataAddress = MapViewOfFile(handle, FILE_MAP_READ, 0, 0, UIntPtr.Zero);
                 var GcmzDropsData =
@@ -69,24 +69,24 @@ namespace aviUtlConnector
                 {
                     CloseHandle(handle);
                 }
-                // ˆ—‚ğ•ª‚¯‚é‚Ì‚Å‚±‚±‚ç‚Ö‚ñ‚ÅgcmzDropsData‚ğˆê‰ñ•Ô‚·?
-                // wavƒtƒ@ƒCƒ‹‚ğŠJ‚­Aƒtƒ@ƒCƒ‹ƒpƒX‚©‚çŒ^”»•Ê‚·‚é
-                // copyDataStruct‚ğì‚é
+                // å‡¦ç†ã‚’åˆ†ã‘ã‚‹ã®ã§ã“ã“ã‚‰ã¸ã‚“ã§gcmzDropsDataã‚’ä¸€å›è¿”ã™?
+                // wavãƒ•ã‚¡ã‚¤ãƒ«ã‚’é–‹ãã€ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ã‹ã‚‰å‹åˆ¤åˆ¥ã™ã‚‹
+                // copyDataStructã‚’ä½œã‚‹
                 data = CreateCopyDataStruct(filePathes, layer);
-                // lparam‚ğì‚é
+                // lparamã‚’ä½œã‚‹
                 lparam = Marshal.AllocHGlobal(Marshal.SizeOf(data));
                 Marshal.StructureToPtr(data, lparam, false);
-                // sendMessage‚ÌŒÄ‚Ño‚µ
+                // sendMessageã®å‘¼ã³å‡ºã—
                 SendMessage(gcmzDropsData.WindowHandle, WM_COPYDATA, fromWindowHandle, lparam);
             }
             catch (Exception ex)
             {
                 // 
-                Console.WriteLine("‚È‚ñ‚©—‚¿‚½"+ex);
+                Console.WriteLine("ãªã‚“ã‹è½ã¡ãŸ"+ex);
             }
             finally
             {
-                // mutex‚É‚æ‚éƒƒbƒN‚Ì‰ğœ
+                // mutexã«ã‚ˆã‚‹ãƒ­ãƒƒã‚¯ã®è§£é™¤
                 if (mutex != null)
                 {
                     if (isMutexLocked)
@@ -98,38 +98,38 @@ namespace aviUtlConnector
             }
         }
         /// <summary>
-        /// w‚²‚¿‚á‚Ü‚ºƒhƒƒbƒvƒXx v0.3.12 ˆÈ~—p‚Ì COPYDATASTRUCT ’l‚ğì¬‚·‚éB
+        /// ã€ã”ã¡ã‚ƒã¾ãœãƒ‰ãƒ­ãƒƒãƒ—ã‚¹ã€ v0.3.12 ä»¥é™ç”¨ã® COPYDATASTRUCT å€¤ã‚’ä½œæˆã™ã‚‹ã€‚
         /// </summary>
-        /// <param name="layer">ƒŒƒCƒ„[ˆÊ’uw’èB</param>
-        /// <param name="frameAdvance">ƒhƒƒbƒvŒã‚Éi‚ß‚éƒtƒŒ[ƒ€”B</param>
-        /// <param name="files">ƒtƒ@ƒCƒ‹ƒpƒX—ñ‹“B</param>
+        /// <param name="layer">ãƒ¬ã‚¤ãƒ¤ãƒ¼ä½ç½®æŒ‡å®šã€‚</param>
+        /// <param name="frameAdvance">ãƒ‰ãƒ­ãƒƒãƒ—å¾Œã«é€²ã‚ã‚‹ãƒ•ãƒ¬ãƒ¼ãƒ æ•°ã€‚</param>
+        /// <param name="files">ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹åˆ—æŒ™ã€‚</param>
         /// <returns>
-        /// COPYDATASTRUCT ’lB
-        /// DataAddress ƒtƒB[ƒ‹ƒh‚Í—˜—pŒã‚É Marshal.FreeHGlobal ‚Å‰ğ•ú‚·‚é•K—v‚ª‚ ‚éB
+        /// COPYDATASTRUCT å€¤ã€‚
+        /// DataAddress ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã¯åˆ©ç”¨å¾Œã« Marshal.FreeHGlobal ã§è§£æ”¾ã™ã‚‹å¿…è¦ãŒã‚ã‚‹ã€‚
         /// </returns>
         private static COPYDATASTRUCT CreateCopyDataStruct(
             String[] files,
             int layer,
             int frameAdvance = 0)
         {
-            // ‰½ƒtƒŒ[ƒ€i‚ß‚é‚©‚Ìæ“¾ˆ—
+            // ä½•ãƒ•ãƒ¬ãƒ¼ãƒ é€²ã‚ã‚‹ã‹ã®å–å¾—å‡¦ç†
             foreach(String filePath in files)
             {
-                // .wavƒtƒ@ƒCƒ‹‚©‚ÂframeAdvance‚ªİ’è‚³‚ê‚Ä‚È‚¢ê‡AÅ‰‚Ìwavƒtƒ@ƒCƒ‹‚Ì’·‚³‚¾‚¯i‚ß‚é
+                // .wavãƒ•ã‚¡ã‚¤ãƒ«ã‹ã¤frameAdvanceãŒè¨­å®šã•ã‚Œã¦ãªã„å ´åˆã€æœ€åˆã®wavãƒ•ã‚¡ã‚¤ãƒ«ã®é•·ã•ã ã‘é€²ã‚ã‚‹
                 String fileExt = Path.GetExtension(filePath);
                 if(fileExt.ToLower() == ".wav" && frameAdvance <= 0)
                 {
-                    // •Ô‹p’l‚ªƒ~ƒŠ•b‚È‚Ì‚Å/1000*ƒtƒŒ[ƒ€ƒŒ[ƒg‚ªi‚ß‚é‚×‚«ƒtƒŒ[ƒ€”
+                    // è¿”å´å€¤ãŒãƒŸãƒªç§’ãªã®ã§/1000*ãƒ•ãƒ¬ãƒ¼ãƒ ãƒ¬ãƒ¼ãƒˆãŒé€²ã‚ã‚‹ã¹ããƒ•ãƒ¬ãƒ¼ãƒ æ•°
                     double rawFrameCount = Audio.getAudioFileMilliSecondsLength(filePath);
                     frameAdvance = (int)Math.Round(rawFrameCount / 1000 * 60);
                     break;
                 }
             }
-            // ‘—MJSON•¶š—ñì¬
+            // é€ä¿¡JSONæ–‡å­—åˆ—ä½œæˆ
             var json = DynamicJson.Serialize(new { layer, frameAdvance, files });
             var data = Encoding.UTF8.GetBytes(json);
 
-            // COPYDATASTRUCT ì¬
+            // COPYDATASTRUCT ä½œæˆ
             var cds = new COPYDATASTRUCT();
             try
             {
@@ -159,7 +159,7 @@ namespace aviUtlConnector
             public int size;
             public IntPtr intPtr;
         }
-        // ‚²‚¿‚á‚Ü‚ºƒhƒƒbƒvƒX‚Ìƒtƒ@ƒCƒ‹ƒ}ƒbƒsƒ“ƒO“Ç‚İ‚İŠÖŒW
+        // ã”ã¡ã‚ƒã¾ãœãƒ‰ãƒ­ãƒƒãƒ—ã‚¹ã®ãƒ•ã‚¡ã‚¤ãƒ«ãƒãƒƒãƒ”ãƒ³ã‚°èª­ã¿è¾¼ã¿é–¢ä¿‚
         private const uint FILE_MAP_READ = 0x0004;
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -182,14 +182,14 @@ namespace aviUtlConnector
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool UnmapViewOfFile(IntPtr address);
 
-        // ƒfƒXƒNƒgƒbƒv‚ÌƒEƒBƒ“ƒhƒEæ“¾
+        // ãƒ‡ã‚¹ã‚¯ãƒˆãƒƒãƒ—ã®ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦å–å¾—
 
         [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
         private static extern IntPtr GetDesktopWindow();
 
         [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
         private static extern IntPtr GetWindow(IntPtr windowHandle, uint flags);
-        // ‚²‚¿‚á‚Ü‚ºƒhƒƒbƒvƒX‚ÌAPI(sendMessage)ŠÖŒW
+        // ã”ã¡ã‚ƒã¾ãœãƒ‰ãƒ­ãƒƒãƒ—ã‚¹ã®API(sendMessage)é–¢ä¿‚
         private const uint WM_COPYDATA = 0x004A;
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         private static extern IntPtr SendMessage(
