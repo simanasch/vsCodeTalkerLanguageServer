@@ -128,7 +128,10 @@ namespace SpeechGrpcServer
                     OutputPath = request.OutputPath
                 });
                 // 保存したファイルをaviutlに送りつける
-                AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath);
+                if(request.Config.IsEnabled)
+                {
+                AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath, request.Config.AviutlLayer);
+                }
             };
             // recorderの起動後に音声を再生する
             recorder.Start();
