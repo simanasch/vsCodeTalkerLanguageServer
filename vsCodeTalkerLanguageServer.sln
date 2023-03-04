@@ -7,7 +7,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "aviUtlConnector", "aviUtlDr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeechGRpcServer", "SpeechGRpcServer\SpeechGRpcServer.csproj", "{31E3AECD-3161-4DBD-BB33-B00A92BDCEB0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speech", "..\TTSController\src\Speech\Speech.csproj", "{7787A468-A1BB-4077-85BC-543258610060}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speech", "TTSController\src\Speech\Speech.csproj", "{7787A468-A1BB-4077-85BC-543258610060}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
