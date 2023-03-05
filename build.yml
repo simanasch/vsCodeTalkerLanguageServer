@@ -1,0 +1,27 @@
+name: MSBuild
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+    release:
+      types: [ prereleased, released]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: リポジトリのチェックアウト
+        uses: actions/checkout@v3
+        submodules: 'true'
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1
+      - name: msbuildの実行
+        run: |
+          msbuild TTSController.sln /t:build /p:configuration=release /p:Platform="x64"
+      - name: ビルド内容を保存
+        uses: actions/upload-artifact@v3
+        with: 
+          name: SpeechGRpcServer
+          path: ./SpeechGRpcServer/bin/x64/Release/net48/*
