@@ -21,10 +21,10 @@ jobs:
       - name: nugetのインストール
         uses: nuget/setup-nuget@v1
       - name: submoduleのnugetパッケージインストール
-        run: nuget restore ./TTSController/src/vsCodeTalkerLanguageServer.sln
+        run: nuget restore ./TTSController/src/TTSController.sln
       - name: submoduleのビルド
         run: |
-          msbuild ./TTSController/src/vsCodeTalkerLanguageServer.sln /t:build /p:configuration=release /p:platform="x64"
+          msbuild ./TTSController/src/TTSController.sln /t:build /p:configuration=release /p:platform="x64"
       - name: 本体のnugetパッケージインストール
         run: nuget restore vsCodeTalkerLanguageServer.sln
       - name: 本体のmsbuildの実行
