@@ -20,7 +20,7 @@ jobs:
         uses: microsoft/setup-msbuild@v1
       - name: msbuildの実行
         run: |
-          msbuild TTSController.sln /t:build /p:configuration=release /p:Platform="x64"
+          msbuild vsCodeTalkerLanguageServer.sln /t:build /p:configuration=release /p:Platform="x64"
       - name: ビルド内容を保存
         uses: actions/upload-artifact@v3
         with: 
