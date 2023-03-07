@@ -8,9 +8,17 @@ on:
     release:
       types: [ prereleased, released]
 
+env: 
+  RELEASE_ARTIFACT_NAME: SpeechGRpcServer
+
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      BUILD_OPTION: /t:build /p:configuration=release /p:platform="x64"
+      SOLUTION_PATH_SUBMODULE: ./TTSController/src/TTSController.sln
+      SOLUTION_PATH_MAIN: vsCodeTalkerLanguageServer.sln
+      RELEASE_ARTIFACT_PATH: ./SpeechGRpcServer/bin/x64/Release/net48/*
     steps:
       - name: リポジトリのチェックアウト
         uses: actions/checkout@v3
@@ -21,17 +29,33 @@ jobs:
       - name: nugetのインストール
         uses: nuget/setup-nuget@v1
       - name: submoduleのnugetパッケージインストール
-        run: nuget restore ./TTSController/src/TTSController.sln
+        run: nuget restore ${{env.SOLUTION_PATH_SUBMODULE}}
       - name: submoduleのビルド
         run: |
-          msbuild ./TTSController/src/TTSController.sln /t:build /p:configuration=release /p:platform="x64"
+          msbuild ${{env.SOLUTION_PATH_SUBMODULE}} ${{env.BUILD_OPTION}}
       - name: 本体のnugetパッケージインストール
-        run: nuget restore vsCodeTalkerLanguageServer.sln
+        run: nuget restore ${{env.SOLUTION_PATH_MAIN}}
       - name: 本体のmsbuildの実行
         run: |
-          msbuild vsCodeTalkerLanguageServer.sln /t:build /p:configuration=release /p:platform="x64"
+          msbuild ${{env.SOLUTION_PATH_MAIN}} ${{env.BUILD_OPTION}}
       - name: ビルド内容を保存
         uses: actions/upload-artifact@v3
         with: 
-          name: SpeechGRpcServer
-          path: ./SpeechGRpcServer/bin/x64/Release/net48/*
+          name: ${{env.RELEASE_ARTIFACT_NAME}}
+          path: ${{env.RELEASE_ARTIFACT_PATH}}
+  release:
+    runs-on: windows-latest
+    needs: build
+    if: ${{github.ref_type == 'tag'}}
+    env:
+      RELEASE_ARTIFACT_FOLDER: /SpeechGRpcServer
+    steps: 
+      - name: ビルド成果物のダウンロード
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{env.RELEASE_ARTIFACT_NAME}}
+          path: ${{env.RELEASE_ARTIFACT_FOLDER}}
+      - name: ビルド成果物をzipに圧縮
+        run: 7z a ${{env.RELEASE_ARTIFACT_NAME}} "${{env.RELEASE_ARTIFACT_FOLDER}}" -tzip
+      - name: リリースの作成
+        run: gh release create ${{github.ref_name}} ${{env.RELEASE_ARTIFACT_NAME}} --generate-notes
