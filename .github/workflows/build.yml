@@ -49,6 +49,7 @@ jobs:
     if: ${{github.ref_type == 'tag'}}
     env:
       RELEASE_ARTIFACT_FOLDER: /SpeechGRpcServer
+      GH_TOKEN: ${{ github.token }}
     steps: 
       - name: ビルド成果物のダウンロード
         uses: actions/download-artifact@v3
