@@ -117,6 +117,7 @@ namespace SpeechGrpcServer
                     Body = request.Body,
                     OutputPath = request.OutputPath
                 });
+                engine.Dispose();
                 // 保存したファイルをaviutlに送りつける
                 if (request.Config.IsEnabled)
                 {
