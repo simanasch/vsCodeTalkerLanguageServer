@@ -46,6 +46,20 @@ namespace aviUtlConnector
             this.ApiVersion = data.ApiVersion;
         }
 
+        internal GcmzDropsProjectConfig(ref LegacyLayout data)
+        {
+            this.WindowHandle = new IntPtr(data.WindowHandle);
+            this.Width = data.Width;
+            this.Height = data.Height;
+            this.FrameRateBase = data.VideoRate;
+            this.FrameRateScale = data.VideoScale;
+            this.FrameRate =
+                (data.VideoScale > 0) ? ((decimal)data.VideoRate / data.VideoScale) : 0;
+            this.AudioSampleRate = data.AudioRate;
+            this.AudioChannelCount = data.AudioChannel;
+            this.ApiVersion = data.ApiVersion;
+        }
+
         /// <summary>
         /// WM_COPYDATA メッセージ送信先ウィンドウハンドルを取得する。
         /// </summary>
