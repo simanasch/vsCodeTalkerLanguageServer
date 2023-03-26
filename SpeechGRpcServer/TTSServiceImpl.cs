@@ -107,7 +107,21 @@ namespace SpeechGrpcServer
             Task<ttsResult> result = null;
             if(engine is Speech.AIVOICEController)
             {
-                result = RecordViaTtsController(engine, recorder, request);
+                //result = RecordViaTtsController(engine, recorder, request);
+                engine.Activate();
+                ((Speech.AIVOICEController)engine).Record(request.Body, request.OutputPath);
+                result = Task.FromResult(new ttsResult {
+                    IsSuccess = true,
+                    LibraryName = request.LibraryName,
+                    EngineName = request.EngineName,
+                    Body = request.Body,
+                    OutputPath = request.OutputPath
+                });
+                // 保存したファイルをaviutlに送りつける
+                if (request.Config.IsEnabled)
+                {
+                    AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath, request.Config.AviutlLayer);
+                }
             } else
             {
                 result = RecordViaTtsController(engine, recorder, request);
