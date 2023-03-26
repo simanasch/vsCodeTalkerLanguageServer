@@ -104,8 +104,15 @@ namespace SpeechGrpcServer
                     IsSuccess = false
                 });
             }
-            // TODO: 録音機能を自前実装してるかで処理分岐
-            return RecordViaTtsController(engine, recorder, request);
+            Task<ttsResult> result = null;
+            if(engine is Speech.AIVOICEController)
+            {
+                result = RecordViaTtsController(engine, recorder, request);
+            } else
+            {
+                result = RecordViaTtsController(engine, recorder, request);
+            }
+            return result;
         }
 
         private static Task<ttsResult> RecordViaTtsController(ISpeechController engine, SoundRecorder recorder, ttsRequest request)
