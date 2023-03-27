@@ -1,14 +1,14 @@
 [exedit]
-width=$PROJECT_WIDTH
-height=$PROJECT_HEIGHT
-rate=$PROJECT_FRAME_RATE
+width={0}
+height={1}
+rate={2}
 scale=1
 length=100
 audio_rate=44100
 audio_ch=2
 [0]
 start=1
-end=$DURATION
+end={3}
 layer=1
 overlay=1
 camera=0
@@ -32,7 +32,7 @@ precision=0
 color=ffffff
 color2=000000
 font=MS UI Gothic
-text=$TEXT_BODY
+text={4}
 [0.1]
 _name=アニメーション効果
 track0=0.00
@@ -43,7 +43,7 @@ check0=0
 type=0
 filter=2
 name=口パク準備@PSDToolKit
-param=file="$FILE_NAME"
+param=file="{5}"
 [0.2]
 _name=アニメーション効果
 track0=0.00

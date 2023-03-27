@@ -6,35 +6,37 @@ using System.IO;
 using System.Text;
 using Codeplex.Data;
 using aviUtlDropper.utilities;
-using System.Resources;
 
 namespace aviUtlConnector
 {
     public class AviutlConnector
     {
         private const string FileMapName = @"GCMZDrops";
+        private const string SUBTITLE_TEXT_PREFIX = @"<?s=[==[";
+        private const string SUBTITLE_TEXT_SUFFIX = "]==];require(\\\"PSDToolKit\\\").prep.init({ls_mgl=0,ls_mgr=0,st_mgl=0,st_mgr=0,sl_mgl=0,sl_mgr=0,},obj,s)?>";
+
+        enum SendFileType
+        {
+            SoundOnly,
+            SoundWithSimpleLipsync,
+            SoundWithComplexLipsync
+        }
+
         public static void SendFile(
             IntPtr fromWindowHandle,
             string filePath,
-            int layer = 0,
-            int stepFrameCount = 0,
-            int timeoutMilliseconds = -1)
+            int layer = 0)
         {
             SendFiles(
                 fromWindowHandle,
                 new[] { filePath },
-                layer,
-                stepFrameCount,
-                timeoutMilliseconds);
-            generateSubtitleObject();
+                layer);
         }
 
         public static void SendFiles(
             IntPtr fromWindowHandle,
             string[] filePathes,
-            int layer = 0,
-            int stepFrameCount = 0,
-            int timeoutMilliseconds = -1)
+            int layer = 0)
         {
             // TODO:mutexによるロック状態はクラス変数にする
             Mutex mutex = null;
@@ -70,10 +72,11 @@ namespace aviUtlConnector
                 {
                     CloseHandle(handle);
                 }
-                // 処理を分けるのでここらへんでgcmzDropsDataを一回返す?
                 // wavファイルを開く、ファイルパスから型判別する
+                int wavFileLength = getWaveFileLength(filePathes, gcmzDropsData);
+                generateSubtitleObject(gcmzDropsData, wavFileLength, filePathes);
                 // copyDataStructを作る
-                data = CreateCopyDataStruct(filePathes, layer);
+                data = CreateCopyDataStruct(filePathes, layer, wavFileLength);
                 // lparamを作る
                 lparam = Marshal.AllocHGlobal(Marshal.SizeOf(data));
                 Marshal.StructureToPtr(data, lparam, false);
@@ -113,19 +116,7 @@ namespace aviUtlConnector
             int layer,
             int frameAdvance = 0)
         {
-            // 何フレーム進めるかの取得処理
-            foreach(String filePath in files)
-            {
-                // .wavファイルかつframeAdvanceが設定されてない場合、最初のwavファイルの長さだけ進める
-                String fileExt = Path.GetExtension(filePath);
-                if(fileExt.ToLower() == ".wav" && frameAdvance <= 0)
-                {
-                    // 返却値がミリ秒なので/1000*フレームレートが進めるべきフレーム数
-                    double rawFrameCount = Audio.getAudioFileMilliSecondsLength(filePath);
-                    frameAdvance = (int)Math.Round(rawFrameCount / 1000 * 60);
-                    break;
-                }
-            }
+
             // 送信JSON文字列作成
             var json = DynamicJson.Serialize(new { layer, frameAdvance, files });
             var data = Encoding.UTF8.GetBytes(json);
@@ -151,11 +142,31 @@ namespace aviUtlConnector
             return cds;
         }
 
-        private static void generateSubtitleObject()
+        private static int getWaveFileLength(string[] filepathes, GcmzDropsProjectConfig config) {
+            int frameAdvance = 0;
+            // 何フレーム進めるかの取得処理
+            foreach (String filePath in filepathes)
+            {
+                // .wavファイルかつframeAdvanceが設定されてない場合、最初のwavファイルの長さだけ進める
+                String fileExt = Path.GetExtension(filePath);
+                if (fileExt.ToLower() == ".wav" && frameAdvance <= 0)
+                {
+                    // 返却値がミリ秒なので/1000*フレームレートが進めるべきフレーム数
+                    decimal rawFrameCount = (decimal) Audio.getAudioFileMilliSecondsLength(filePath);
+                    frameAdvance = (int)Math.Round(rawFrameCount / 1000 * config.FrameRate);
+                    break;
+                }
+            }
+            return frameAdvance;
+        }
+
+        private static void generateSubtitleObject(GcmzDropsProjectConfig config, int wavLength, string[] filepathes)
         {
             // resourceにあるテンプレートファイルを読み込む
             string template = "";
             string filepath = "aviUtlDropper.resources.simpleLipsync.txt";
+            string wavPath = "";
+            string content = "";
             Assembly assembly = Assembly.GetExecutingAssembly();
             using (var rStream = assembly.GetManifestResourceStream(filepath))
             {
@@ -165,8 +176,30 @@ namespace aviUtlConnector
                     template = sr.ReadToEnd();
                 }
             }
+            foreach(string filePath in filepathes)
+            {
+                String fileExt = Path.GetExtension(filePath);
+                if (fileExt.ToLower() == ".wav") {
+                    wavPath = filePath;
+                } else if(fileExt.ToLower() == ".txt")
+                {
+                    using(StreamReader sr = new StreamReader(filePath, Encoding.GetEncoding("shift-jis")))
+                    {
+                        content= SUBTITLE_TEXT_PREFIX + sr.ReadToEnd() + SUBTITLE_TEXT_SUFFIX;
+                    }
+                }
+            }
+            string result = String.Format(
+                template,
+                config.Width,
+                config.Height,
+                config.FrameRate,
+                wavLength,
+                content,
+                wavPath
+            );
         }
-
+        
 
         #region Win32 API import
         [StructLayout(LayoutKind.Sequential)]
