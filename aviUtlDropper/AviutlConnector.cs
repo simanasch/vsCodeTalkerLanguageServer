@@ -1,12 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Linq;
+using System.Reflection;
 using System.IO;
 using System.Text;
 using Codeplex.Data;
 using aviUtlDropper.utilities;
+using System.Resources;
 
 namespace aviUtlConnector
 {
@@ -26,6 +26,7 @@ namespace aviUtlConnector
                 layer,
                 stepFrameCount,
                 timeoutMilliseconds);
+            generateSubtitleObject();
         }
 
         public static void SendFiles(
@@ -148,6 +149,22 @@ namespace aviUtlConnector
             }
 
             return cds;
+        }
+
+        private static void generateSubtitleObject()
+        {
+            // resourceにあるテンプレートファイルを読み込む
+            string template = "";
+            string filepath = "aviUtlDropper.resources.simpleLipsync.txt";
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            using (var rStream = assembly.GetManifestResourceStream(filepath))
+            {
+
+                using (StreamReader sr = new StreamReader(rStream, Encoding.GetEncoding("shift-jis")))
+                {
+                    template = sr.ReadToEnd();
+                }
+            }
         }
 
 
