@@ -107,7 +107,6 @@ namespace SpeechGrpcServer
             Task<ttsResult> result = null;
             if(engine is Speech.AIVOICEController)
             {
-                //result = RecordViaTtsController(engine, recorder, request);
                 engine.Activate();
                 ((Speech.AIVOICEController)engine).Record(request.Body, request.OutputPath);
                 result = Task.FromResult(new ttsResult {
