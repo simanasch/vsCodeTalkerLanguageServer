@@ -15,28 +15,16 @@ namespace aviUtlConnector
         private const string SUBTITLE_TEXT_PREFIX = @"<?s=[==[";
         private const string SUBTITLE_TEXT_SUFFIX = "]==];require(\\\"PSDToolKit\\\").prep.init({ls_mgl=0,ls_mgr=0,st_mgl=0,st_mgr=0,sl_mgl=0,sl_mgr=0,},obj,s)?>";
 
-        enum SendFileType
-        {
-            SoundOnly,
-            SoundWithSimpleLipsync,
-            SoundWithComplexLipsync
-        }
+        private const string SEND_FILE_TYPE_SOUND_ONLY =  "音声のみ";
+        private const string SEND_FILE_TYPE_SOUND_WITH_SIMPLE_LIP_SYNC= "SoundWithSimpleLipsync";
+        private const string SEND_FILE_TYPE_SOUND_WITH_COMPLEX_LIP_SYNC = "SoundWithComplexLipsync";
 
         public static void SendFile(
             IntPtr fromWindowHandle,
             string filePath,
-            int layer = 0)
-        {
-            SendFiles(
-                fromWindowHandle,
-                new[] { filePath },
-                layer);
-        }
-
-        public static void SendFiles(
-            IntPtr fromWindowHandle,
-            string[] filePathes,
-            int layer = 0)
+            int layer = 0,
+            string sendFileType = "",
+            string body="")
         {
             // TODO:mutexによるロック状態はクラス変数にする
             Mutex mutex = null;
@@ -73,10 +61,14 @@ namespace aviUtlConnector
                     CloseHandle(handle);
                 }
                 // wavファイルを開く、ファイルパスから型判別する
-                int wavFileLength = getWaveFileLength(filePathes, gcmzDropsData);
-                generateSubtitleObject(gcmzDropsData, wavFileLength, filePathes);
+                int wavFileLength = getWaveFileLength(filePath, gcmzDropsData);
+                if(sendFileType != SEND_FILE_TYPE_SOUND_ONLY)
+                {
+                    string subtitlePath = generateSubtitleObject(gcmzDropsData, wavFileLength, filePath, body);
+
+                }
                 // copyDataStructを作る
-                data = CreateCopyDataStruct(filePathes, layer, wavFileLength);
+                data = CreateCopyDataStruct(new[] { filePath }, layer, wavFileLength);
                 // lparamを作る
                 lparam = Marshal.AllocHGlobal(Marshal.SizeOf(data));
                 Marshal.StructureToPtr(data, lparam, false);
@@ -142,33 +134,25 @@ namespace aviUtlConnector
             return cds;
         }
 
-        private static int getWaveFileLength(string[] filepathes, GcmzDropsProjectConfig config) {
+        private static int getWaveFileLength(string filePath, GcmzDropsProjectConfig config) {
             int frameAdvance = 0;
             // 何フレーム進めるかの取得処理
-            foreach (String filePath in filepathes)
+            String fileExt = Path.GetExtension(filePath);
+            if (fileExt.ToLower() == ".wav" && frameAdvance <= 0)
             {
-                // .wavファイルかつframeAdvanceが設定されてない場合、最初のwavファイルの長さだけ進める
-                String fileExt = Path.GetExtension(filePath);
-                if (fileExt.ToLower() == ".wav" && frameAdvance <= 0)
-                {
-                    // 返却値がミリ秒なので/1000*フレームレートが進めるべきフレーム数
-                    decimal rawFrameCount = (decimal) Audio.getAudioFileMilliSecondsLength(filePath);
-                    frameAdvance = (int)Math.Round(rawFrameCount / 1000 * config.FrameRate);
-                    break;
-                }
+                // 返却値がミリ秒なので/1000*フレームレートが進めるべきフレーム数
+                decimal rawFrameCount = (decimal) Audio.getAudioFileMilliSecondsLength(filePath);
+                frameAdvance = (int)Math.Round(rawFrameCount / 1000 * config.FrameRate);
             }
             return frameAdvance;
         }
-
-        private static void generateSubtitleObject(GcmzDropsProjectConfig config, int wavLength, string[] filepathes)
+        private const string TEMPLATE_EXO_PATH = "aviUtlDropper.resources.simpleLipsync.txt";
+        private static string generateSubtitleObject(GcmzDropsProjectConfig config, int wavLength, string filePath, string body="")
         {
             // resourceにあるテンプレートファイルを読み込む
             string template = "";
-            string filepath = "aviUtlDropper.resources.simpleLipsync.txt";
-            string wavPath = "";
-            string content = "";
             Assembly assembly = Assembly.GetExecutingAssembly();
-            using (var rStream = assembly.GetManifestResourceStream(filepath))
+            using (var rStream = assembly.GetManifestResourceStream(TEMPLATE_EXO_PATH))
             {
 
                 using (StreamReader sr = new StreamReader(rStream, Encoding.GetEncoding("shift-jis")))
@@ -176,28 +160,34 @@ namespace aviUtlConnector
                     template = sr.ReadToEnd();
                 }
             }
-            foreach(string filePath in filepathes)
+            String content = "";
+            // 字幕にする文字列はprefix,suffixをつけた上で1文字づつutf-16LE、固定長4文字のバイト文字列に変換する
+
+            foreach(char c in String.Join("\r\n", new string[] { SUBTITLE_TEXT_PREFIX , body ,SUBTITLE_TEXT_SUFFIX })
+                .ToCharArray())
             {
-                String fileExt = Path.GetExtension(filePath);
-                if (fileExt.ToLower() == ".wav") {
-                    wavPath = filePath;
-                } else if(fileExt.ToLower() == ".txt")
-                {
-                    using(StreamReader sr = new StreamReader(filePath, Encoding.GetEncoding("shift-jis")))
-                    {
-                        content= SUBTITLE_TEXT_PREFIX + sr.ReadToEnd() + SUBTITLE_TEXT_SUFFIX;
-                    }
-                }
+                content += BitConverter.ToString(
+                    Encoding.GetEncoding("UTF-16LE")
+                        .GetBytes(c.ToString() )
+                    )
+                .Replace("-", "")
+                .ToLower()
+                .PadRight(4, '0');
             }
-            string result = String.Format(
+            content = content.PadRight(4096, '0');
+            string result = string.Format(
                 template,
                 config.Width,
                 config.Height,
                 config.FrameRate,
                 wavLength,
                 content,
-                wavPath
+                filePath.Replace(@"\", @"\\")
+
             );
+            string resultFilePath = filePath.Replace(".wav", ".exo");
+            using (StreamWriter wStream = new StreamWriter(resultFilePath, true, Encoding.GetEncoding("shift-jis"))) { wStream.Write(result); }
+            return resultFilePath;
         }
         
 

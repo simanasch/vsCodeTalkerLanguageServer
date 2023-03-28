@@ -120,7 +120,8 @@ namespace SpeechGrpcServer
                 // 保存したファイルをaviutlに送りつける
                 if (request.Config.IsEnabled)
                 {
-                    AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath, request.Config.AviutlLayer);
+                    AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath, request.Config.AviutlLayer,
+                        request.Config.FileDropType, request.Body);
                 }
             } else
             {
@@ -151,7 +152,8 @@ namespace SpeechGrpcServer
                 // 保存したファイルをaviutlに送りつける
                 if(request.Config.IsEnabled)
                 {
-                AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath, request.Config.AviutlLayer);
+                AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath, request.Config.AviutlLayer,
+                    request.Config.FileDropType, request.Body);
                 }
             };
             // recorderの起動後に音声を再生する
