@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using Codeplex.Data;
 using aviUtlDropper.utilities;
+using System.Collections.Generic;
 
 namespace aviUtlConnector
 {
@@ -13,11 +14,11 @@ namespace aviUtlConnector
     {
         private const string FileMapName = @"GCMZDrops";
         private const string SUBTITLE_TEXT_PREFIX = @"<?s=[==[";
-        private const string SUBTITLE_TEXT_SUFFIX = "]==];require(\\\"PSDToolKit\\\").prep.init({ls_mgl=0,ls_mgr=0,st_mgl=0,st_mgr=0,sl_mgl=0,sl_mgr=0,},obj,s)?>";
+        private const string SUBTITLE_TEXT_SUFFIX = "]==];require(\"PSDToolKit\").prep.init({ls_mgl=0,ls_mgr=0,st_mgl=0,st_mgr=0,sl_mgl=0,sl_mgr=0,},obj,s)?>";
 
         private const string SEND_FILE_TYPE_SOUND_ONLY =  "音声のみ";
-        private const string SEND_FILE_TYPE_SOUND_WITH_SIMPLE_LIP_SYNC= "SoundWithSimpleLipsync";
-        private const string SEND_FILE_TYPE_SOUND_WITH_COMPLEX_LIP_SYNC = "SoundWithComplexLipsync";
+        private const string SEND_FILE_TYPE_SOUND_WITH_SIMPLE_LIP_SYNC= "音声+テキスト";
+        private const string SEND_FILE_TYPE_SOUND_WITH_COMPLEX_LIP_SYNC = "音声+テキスト+音素";
 
         public static void SendFile(
             IntPtr fromWindowHandle,
@@ -38,6 +39,7 @@ namespace aviUtlConnector
                 Console.WriteLine("mutex開き損ねた" + ex);
             }
             bool isMutexLocked = false;
+            List<string> filePathes = new List<string> {};
             try
             {
                 GcmzDropsProjectConfig gcmzDropsData = null;
@@ -60,15 +62,26 @@ namespace aviUtlConnector
                 {
                     CloseHandle(handle);
                 }
-                // wavファイルを開く、ファイルパスから型判別する
+                // wavファイルの長さ取得
                 int wavFileLength = getWaveFileLength(filePath, gcmzDropsData);
+                // 送りつけるファイルのリスト作成
+                filePathes.Add(filePath);
                 if(sendFileType != SEND_FILE_TYPE_SOUND_ONLY)
                 {
                     string subtitlePath = generateSubtitleObject(gcmzDropsData, wavFileLength, filePath, body);
-
+                    filePathes.Add(subtitlePath);
+                }
+                // labファイルは生成できている場合だけ追加する
+                if(sendFileType == SEND_FILE_TYPE_SOUND_WITH_COMPLEX_LIP_SYNC)
+                {
+                    string labPath = filePath.Replace(".wav", ".lab");
+                    if(File.Exists(labPath))
+                    {
+                        filePathes.Add(labPath);
+                    }
                 }
                 // copyDataStructを作る
-                data = CreateCopyDataStruct(new[] { filePath }, layer, wavFileLength);
+                data = CreateCopyDataStruct(filePathes, layer, wavFileLength);
                 // lparamを作る
                 lparam = Marshal.AllocHGlobal(Marshal.SizeOf(data));
                 Marshal.StructureToPtr(data, lparam, false);
@@ -77,7 +90,6 @@ namespace aviUtlConnector
             }
             catch (Exception ex)
             {
-                // 
                 Console.WriteLine("なんか落ちた"+ex);
             }
             finally
@@ -96,15 +108,15 @@ namespace aviUtlConnector
         /// <summary>
         /// 『ごちゃまぜドロップス』 v0.3.12 以降用の COPYDATASTRUCT 値を作成する。
         /// </summary>
-        /// <param name="layer">レイヤー位置指定。</param>
-        /// <param name="frameAdvance">ドロップ後に進めるフレーム数。</param>
-        /// <param name="files">ファイルパス列挙。</param>
+        /// <param name="files">連携するファイルパスのリスト</param>
+        /// <param name="layer">レイヤー位置指定</param>
+        /// <param name="frameAdvance">ドロップ後に進めるフレーム数</param>
         /// <returns>
         /// COPYDATASTRUCT 値。
         /// DataAddress フィールドは利用後に Marshal.FreeHGlobal で解放する必要がある。
         /// </returns>
         private static COPYDATASTRUCT CreateCopyDataStruct(
-            String[] files,
+            List<string> files,
             int layer,
             int frameAdvance = 0)
         {
@@ -180,7 +192,7 @@ namespace aviUtlConnector
                 config.Width,
                 config.Height,
                 config.FrameRate,
-                wavLength,
+                wavLength - 1,
                 content,
                 filePath.Replace(@"\", @"\\")
 
