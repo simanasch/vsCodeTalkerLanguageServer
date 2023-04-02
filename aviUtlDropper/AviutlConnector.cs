@@ -13,8 +13,8 @@ namespace aviUtlConnector
     public class AviutlConnector
     {
         private const string FileMapName = @"GCMZDrops";
-        private const string SUBTITLE_TEXT_PREFIX = @"<?s=[==[";
-        private const string SUBTITLE_TEXT_SUFFIX = "]==];require(\"PSDToolKit\").prep.init({ls_mgl=0,ls_mgr=0,st_mgl=0,st_mgr=0,sl_mgl=0,sl_mgr=0,},obj,s)?>";
+        //private const string SUBTITLE_TEXT_PREFIX = @"<?s=[==[";
+        //private const string SUBTITLE_TEXT_SUFFIX = "]==];require(\"PSDToolKit\").prep.init({ls_mgl=0,ls_mgr=0,st_mgl=0,st_mgr=0,sl_mgl=0,sl_mgr=0,},obj,s)?>";
 
         private const string SEND_FILE_TYPE_SOUND_ONLY =  "音声のみ";
         private const string SEND_FILE_TYPE_SOUND_WITH_SIMPLE_LIP_SYNC= "音声+テキスト";
@@ -65,11 +65,13 @@ namespace aviUtlConnector
                 // wavファイルの長さ取得
                 int wavFileLength = getWaveFileLength(filePath, gcmzDropsData);
                 // 送りつけるファイルのリスト作成
-                filePathes.Add(filePath);
                 if(sendFileType != SEND_FILE_TYPE_SOUND_ONLY)
                 {
-                    string subtitlePath = generateSubtitleObject(gcmzDropsData, wavFileLength, filePath, body);
+                    string subtitlePath = generateExoFile(gcmzDropsData, wavFileLength, filePath, body);
                     filePathes.Add(subtitlePath);
+                } else
+                {
+                    filePathes.Add(filePath);
                 }
                 // labファイルは生成できている場合だけ追加する
                 if(sendFileType == SEND_FILE_TYPE_SOUND_WITH_COMPLEX_LIP_SYNC)
@@ -158,27 +160,23 @@ namespace aviUtlConnector
             }
             return frameAdvance;
         }
-        private const string TEMPLATE_EXO_PATH = "aviUtlDropper.resources.simpleLipsync.txt";
-        private static string generateSubtitleObject(GcmzDropsProjectConfig config, int wavLength, string filePath, string body="")
+        private const string TEMPLATE_HEADER_PATH = "aviUtlDropper.resources.exoHeader.txt";
+        private const string TEMPLATE_WAV_BODY_PATH = "aviUtlDropper.resources.exoWavBody.txt";
+        private const string TEMPLATE_SUBTITLE_BODY_PATH = "aviUtlDropper.resources.simpleLipsyncExoSubtitle.txt";
+        private static Assembly assembly = Assembly.GetExecutingAssembly();
+
+        private static string generateExoFile(GcmzDropsProjectConfig config, int wavLength, string filePath, string body="")
         {
             // resourceにあるテンプレートファイルを読み込む
-            string template = "";
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            using (var rStream = assembly.GetManifestResourceStream(TEMPLATE_EXO_PATH))
-            {
-
-                using (StreamReader sr = new StreamReader(rStream, Encoding.GetEncoding("shift-jis")))
-                {
-                    template = sr.ReadToEnd();
-                }
-            }
-            String content = "";
+            string header = getTextbodyFromResource(TEMPLATE_HEADER_PATH);
+            string wavBody = getTextbodyFromResource(TEMPLATE_WAV_BODY_PATH);
+            string subtitle = getTextbodyFromResource(TEMPLATE_SUBTITLE_BODY_PATH);
             // 字幕にする文字列はprefix,suffixをつけた上で1文字づつutf-16LE、固定長4文字のバイト文字列に変換する
+            string subtitleBody = "";
 
-            foreach(char c in String.Join("\r\n", new string[] { SUBTITLE_TEXT_PREFIX , body ,SUBTITLE_TEXT_SUFFIX })
-                .ToCharArray())
+            foreach(char c in body.ToCharArray())
             {
-                content += BitConverter.ToString(
+                subtitleBody += BitConverter.ToString(
                     Encoding.GetEncoding("UTF-16LE")
                         .GetBytes(c.ToString() )
                     )
@@ -186,22 +184,40 @@ namespace aviUtlConnector
                 .ToLower()
                 .PadRight(4, '0');
             }
-            content = content.PadRight(4096, '0');
-            string result = string.Format(
-                template,
+            subtitleBody = subtitleBody.PadRight(4096, '0');
+            string headerResult = string.Format(
+                header,
                 config.Width,
                 config.Height,
-                config.FrameRate,
-                wavLength - 1,
-                content,
+                config.FrameRate
+            );
+            string wavBodyResult = string.Format(wavBody, wavLength - 1, filePath);
+            string subtitleResult = string.Format(
+                subtitle, 
+                wavLength - 1, 
+                subtitleBody,
                 filePath.Replace(@"\", @"\\")
-
             );
             string resultFilePath = filePath.Replace(".wav", ".exo");
-            using (StreamWriter wStream = new StreamWriter(resultFilePath, true, Encoding.GetEncoding("shift-jis"))) { wStream.Write(result); }
+            using (StreamWriter wStream = new StreamWriter(resultFilePath, false, Encoding.GetEncoding("shift-jis"))) {
+                wStream.Write(string.Join("\r\n", new string[] { headerResult, wavBodyResult, subtitleResult } ));
+            }
             return resultFilePath;
         }
         
+        private static string getTextbodyFromResource(string filePath)
+        {
+            string result = "";
+            using (var rStream = assembly.GetManifestResourceStream(filePath))
+            {
+
+                using (StreamReader sr = new StreamReader(rStream, Encoding.GetEncoding("shift-jis")))
+                {
+                    result = sr.ReadToEnd();
+                }
+            }
+            return result;
+        }
 
         #region Win32 API import
         [StructLayout(LayoutKind.Sequential)]

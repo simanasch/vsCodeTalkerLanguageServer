@@ -1,0 +1,8 @@
+﻿[exedit]
+width={0}
+height={1}
+rate={2}
+scale=1
+length=100
+audio_rate=44100
+audio_ch=2
