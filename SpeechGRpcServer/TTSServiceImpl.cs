@@ -104,8 +104,30 @@ namespace SpeechGrpcServer
                     IsSuccess = false
                 });
             }
-            // TODO: 録音機能を自前実装してるかで処理分岐
-            return RecordViaTtsController(engine, recorder, request);
+            Task<ttsResult> result = null;
+            if(engine is Speech.AIVOICEController)
+            {
+                engine.Activate();
+                ((Speech.AIVOICEController)engine).Record(request.Body, request.OutputPath);
+                result = Task.FromResult(new ttsResult {
+                    IsSuccess = true,
+                    LibraryName = request.LibraryName,
+                    EngineName = request.EngineName,
+                    Body = request.Body,
+                    OutputPath = request.OutputPath
+                });
+                engine.Dispose();
+                // 保存したファイルをaviutlに送りつける
+                if (request.Config.IsEnabled)
+                {
+                    AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath, request.Config.AviutlLayer,
+                        request.Config.FileDropType, request.Body);
+                }
+            } else
+            {
+                result = RecordViaTtsController(engine, recorder, request);
+            }
+            return result;
         }
 
         private static Task<ttsResult> RecordViaTtsController(ISpeechController engine, SoundRecorder recorder, ttsRequest request)
@@ -130,7 +152,8 @@ namespace SpeechGrpcServer
                 // 保存したファイルをaviutlに送りつける
                 if(request.Config.IsEnabled)
                 {
-                AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath, request.Config.AviutlLayer);
+                AviutlConnector.SendFile(TTSControllerImpl.Handle, request.OutputPath, request.Config.AviutlLayer,
+                    request.Config.FileDropType, request.Body);
                 }
             };
             // recorderの起動後に音声を再生する

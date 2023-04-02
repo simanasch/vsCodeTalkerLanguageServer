@@ -1,39 +1,31 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Linq;
+using System.Reflection;
 using System.IO;
 using System.Text;
 using Codeplex.Data;
 using aviUtlDropper.utilities;
+using System.Collections.Generic;
 
 namespace aviUtlConnector
 {
     public class AviutlConnector
     {
         private const string FileMapName = @"GCMZDrops";
+        //private const string SUBTITLE_TEXT_PREFIX = @"<?s=[==[";
+        //private const string SUBTITLE_TEXT_SUFFIX = "]==];require(\"PSDToolKit\").prep.init({ls_mgl=0,ls_mgr=0,st_mgl=0,st_mgr=0,sl_mgl=0,sl_mgr=0,},obj,s)?>";
+
+        private const string SEND_FILE_TYPE_SOUND_ONLY =  "音声のみ";
+        private const string SEND_FILE_TYPE_SOUND_WITH_SIMPLE_LIP_SYNC= "音声+テキスト";
+        private const string SEND_FILE_TYPE_SOUND_WITH_COMPLEX_LIP_SYNC = "音声+テキスト+音素";
+
         public static void SendFile(
             IntPtr fromWindowHandle,
             string filePath,
             int layer = 0,
-            int stepFrameCount = 0,
-            int timeoutMilliseconds = -1)
-        {
-            SendFiles(
-                fromWindowHandle,
-                new[] { filePath },
-                layer,
-                stepFrameCount,
-                timeoutMilliseconds);
-        }
-
-        public static void SendFiles(
-            IntPtr fromWindowHandle,
-            string[] filePathes,
-            int layer = 0,
-            int stepFrameCount = 0,
-            int timeoutMilliseconds = -1)
+            string sendFileType = "",
+            string body="")
         {
             // TODO:mutexによるロック状態はクラス変数にする
             Mutex mutex = null;
@@ -47,6 +39,7 @@ namespace aviUtlConnector
                 Console.WriteLine("mutex開き損ねた" + ex);
             }
             bool isMutexLocked = false;
+            List<string> filePathes = new List<string> {};
             try
             {
                 GcmzDropsProjectConfig gcmzDropsData = null;
@@ -69,10 +62,28 @@ namespace aviUtlConnector
                 {
                     CloseHandle(handle);
                 }
-                // 処理を分けるのでここらへんでgcmzDropsDataを一回返す?
-                // wavファイルを開く、ファイルパスから型判別する
+                // wavファイルの長さ取得
+                int wavFileLength = getWaveFileLength(filePath, gcmzDropsData);
+                // 送りつけるファイルのリスト作成
+                if(sendFileType != SEND_FILE_TYPE_SOUND_ONLY)
+                {
+                    string subtitlePath = generateExoFile(gcmzDropsData, wavFileLength, filePath, body);
+                    filePathes.Add(subtitlePath);
+                } else
+                {
+                    filePathes.Add(filePath);
+                }
+                // labファイルは生成できている場合だけ追加する
+                if(sendFileType == SEND_FILE_TYPE_SOUND_WITH_COMPLEX_LIP_SYNC)
+                {
+                    string labPath = filePath.Replace(".wav", ".lab");
+                    if(File.Exists(labPath))
+                    {
+                        filePathes.Add(labPath);
+                    }
+                }
                 // copyDataStructを作る
-                data = CreateCopyDataStruct(filePathes, layer);
+                data = CreateCopyDataStruct(filePathes, layer, wavFileLength);
                 // lparamを作る
                 lparam = Marshal.AllocHGlobal(Marshal.SizeOf(data));
                 Marshal.StructureToPtr(data, lparam, false);
@@ -81,7 +92,6 @@ namespace aviUtlConnector
             }
             catch (Exception ex)
             {
-                // 
                 Console.WriteLine("なんか落ちた"+ex);
             }
             finally
@@ -100,31 +110,19 @@ namespace aviUtlConnector
         /// <summary>
         /// 『ごちゃまぜドロップス』 v0.3.12 以降用の COPYDATASTRUCT 値を作成する。
         /// </summary>
-        /// <param name="layer">レイヤー位置指定。</param>
-        /// <param name="frameAdvance">ドロップ後に進めるフレーム数。</param>
-        /// <param name="files">ファイルパス列挙。</param>
+        /// <param name="files">連携するファイルパスのリスト</param>
+        /// <param name="layer">レイヤー位置指定</param>
+        /// <param name="frameAdvance">ドロップ後に進めるフレーム数</param>
         /// <returns>
         /// COPYDATASTRUCT 値。
         /// DataAddress フィールドは利用後に Marshal.FreeHGlobal で解放する必要がある。
         /// </returns>
         private static COPYDATASTRUCT CreateCopyDataStruct(
-            String[] files,
+            List<string> files,
             int layer,
             int frameAdvance = 0)
         {
-            // 何フレーム進めるかの取得処理
-            foreach(String filePath in files)
-            {
-                // .wavファイルかつframeAdvanceが設定されてない場合、最初のwavファイルの長さだけ進める
-                String fileExt = Path.GetExtension(filePath);
-                if(fileExt.ToLower() == ".wav" && frameAdvance <= 0)
-                {
-                    // 返却値がミリ秒なので/1000*フレームレートが進めるべきフレーム数
-                    double rawFrameCount = Audio.getAudioFileMilliSecondsLength(filePath);
-                    frameAdvance = (int)Math.Round(rawFrameCount / 1000 * 60);
-                    break;
-                }
-            }
+
             // 送信JSON文字列作成
             var json = DynamicJson.Serialize(new { layer, frameAdvance, files });
             var data = Encoding.UTF8.GetBytes(json);
@@ -150,6 +148,76 @@ namespace aviUtlConnector
             return cds;
         }
 
+        private static int getWaveFileLength(string filePath, GcmzDropsProjectConfig config) {
+            int frameAdvance = 0;
+            // 何フレーム進めるかの取得処理
+            String fileExt = Path.GetExtension(filePath);
+            if (fileExt.ToLower() == ".wav" && frameAdvance <= 0)
+            {
+                // 返却値がミリ秒なので/1000*フレームレートが進めるべきフレーム数
+                decimal rawFrameCount = (decimal) Audio.getAudioFileMilliSecondsLength(filePath);
+                frameAdvance = (int)Math.Round(rawFrameCount / 1000 * config.FrameRate);
+            }
+            return frameAdvance;
+        }
+        private const string TEMPLATE_HEADER_PATH = "aviUtlDropper.resources.exoHeader.txt";
+        private const string TEMPLATE_WAV_BODY_PATH = "aviUtlDropper.resources.exoWavBody.txt";
+        private const string TEMPLATE_SUBTITLE_BODY_PATH = "aviUtlDropper.resources.simpleLipsyncExoSubtitle.txt";
+        private static Assembly assembly = Assembly.GetExecutingAssembly();
+
+        private static string generateExoFile(GcmzDropsProjectConfig config, int wavLength, string filePath, string body="")
+        {
+            // resourceにあるテンプレートファイルを読み込む
+            string header = getTextbodyFromResource(TEMPLATE_HEADER_PATH);
+            string wavBody = getTextbodyFromResource(TEMPLATE_WAV_BODY_PATH);
+            string subtitle = getTextbodyFromResource(TEMPLATE_SUBTITLE_BODY_PATH);
+            // 字幕にする文字列はprefix,suffixをつけた上で1文字づつutf-16LE、固定長4文字のバイト文字列に変換する
+            string subtitleBody = "";
+
+            foreach(char c in body.ToCharArray())
+            {
+                subtitleBody += BitConverter.ToString(
+                    Encoding.GetEncoding("UTF-16LE")
+                        .GetBytes(c.ToString() )
+                    )
+                .Replace("-", "")
+                .ToLower()
+                .PadRight(4, '0');
+            }
+            subtitleBody = subtitleBody.PadRight(4096, '0');
+            string headerResult = string.Format(
+                header,
+                config.Width,
+                config.Height,
+                config.FrameRate
+            );
+            string wavBodyResult = string.Format(wavBody, wavLength - 1, filePath);
+            string subtitleResult = string.Format(
+                subtitle, 
+                wavLength - 1, 
+                subtitleBody,
+                filePath.Replace(@"\", @"\\")
+            );
+            string resultFilePath = filePath.Replace(".wav", ".exo");
+            using (StreamWriter wStream = new StreamWriter(resultFilePath, false, Encoding.GetEncoding("shift-jis"))) {
+                wStream.Write(string.Join("\r\n", new string[] { headerResult, wavBodyResult, subtitleResult } ));
+            }
+            return resultFilePath;
+        }
+        
+        private static string getTextbodyFromResource(string filePath)
+        {
+            string result = "";
+            using (var rStream = assembly.GetManifestResourceStream(filePath))
+            {
+
+                using (StreamReader sr = new StreamReader(rStream, Encoding.GetEncoding("shift-jis")))
+                {
+                    result = sr.ReadToEnd();
+                }
+            }
+            return result;
+        }
 
         #region Win32 API import
         [StructLayout(LayoutKind.Sequential)]

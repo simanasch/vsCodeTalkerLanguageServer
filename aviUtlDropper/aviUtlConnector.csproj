@@ -75,5 +75,12 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="resources\simpleLipsyncExoSubtitle.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="resources\exoHeader.txt" />
+    <EmbeddedResource Include="resources\exoWavBody.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
