@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Ttscontroller;
+using System.Reflection;
 using System.Threading;
 using System.Diagnostics;
 using aviUtlConnector;
@@ -46,7 +47,8 @@ namespace SpeechGrpcServer
                     EnginePath = String.IsNullOrWhiteSpace(engineInfo.EnginePath) ? "" : engineInfo.EnginePath,
                     Is64BitProcess = engineInfo.Is64BitProcess
                 });
-                Console.WriteLine(engineInfo);
+                Console.WriteLine(engineInfo.EngineName);
+                Console.WriteLine(engineInfo.LibraryName);
             }
             return results;
         }
@@ -105,10 +107,11 @@ namespace SpeechGrpcServer
                 });
             }
             Task<ttsResult> result = null;
-            if(engine is Speech.AIVOICEController)
+            MethodInfo methodInfo = engine.GetType().GetMethod("Record");
+            if(methodInfo != null)
             {
                 engine.Activate();
-                ((Speech.AIVOICEController)engine).Record(request.Body, request.OutputPath);
+                methodInfo.Invoke(engine, new[] { request.Body, request.OutputPath });
                 result = Task.FromResult(new ttsResult {
                     IsSuccess = true,
                     LibraryName = request.LibraryName,
